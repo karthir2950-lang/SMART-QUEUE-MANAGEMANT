@@ -7,8 +7,8 @@ function createSupabaseClient() {
     return window.__supabaseClient;
   }
   const client = createClient(
-    import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co',
-    import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder',
+    import.meta.env.VITE_SUPABASE_URL || 'https://argbqkkfoiuwiyfwhufp.supabase.co',
+    import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_pWNZxUFMnxHPc8cTr5QRzA_hDRLyKpv',
     {
       auth: {
         flowType: 'pkce',

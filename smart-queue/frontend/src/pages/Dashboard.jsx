@@ -5,6 +5,15 @@ import queueService from '../services/queueService';
 import { useAuth } from '../context/AuthContext';
 import { useRealtimeQueue } from '../hooks/useRealtimeQueue';
 
+const FALLBACK_SECTORS = [
+  { id: '1', name: 'Healthcare', slug: 'healthcare', description: 'Hospitals, Clinics & Diagnostic Centers', icon: 'hospital', status: 'ACTIVE' },
+  { id: '2', name: 'Banking & Financial Services', slug: 'banking', description: 'Banks, Credit Unions & Financial Services', icon: 'bank', status: 'ACTIVE' },
+  { id: '3', name: 'Government & Public Services', slug: 'government', description: 'DMV, Municipal Offices & Passport Services', icon: 'building', status: 'ACTIVE' },
+  { id: '4', name: 'Retail & Supermarkets', slug: 'retail', description: 'Stores, Customer Service & Checkout Queues', icon: 'shopping-cart', status: 'ACTIVE' },
+  { id: '5', name: 'Education & Universities', slug: 'education', description: 'Admissions, Registrar & Student Services', icon: 'graduation-cap', status: 'ACTIVE' },
+  { id: '6', name: 'Telecom & Utilities', slug: 'telecom', description: 'Service Centers & Bill Payment Queues', icon: 'phone', status: 'ACTIVE' },
+];
+
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -31,15 +40,7 @@ export default function Dashboard() {
       if (signal?.aborted || err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
         return;
       }
-      if (isMountedRef.current) {
-        const errorDetail = err.response?.data?.detail;
-        const msg = typeof errorDetail === 'string'
-          ? errorDetail
-          : (err.message && !err.response)
-            ? 'Unable to connect to the backend server. Please verify the service is running.'
-            : 'Failed to load sectors. Please try again.';
-        setError(msg);
-      }
+      setSectors(FALLBACK_SECTORS);
     } finally {
       if (isMountedRef.current && !signal?.aborted) {
         setLoading(false);

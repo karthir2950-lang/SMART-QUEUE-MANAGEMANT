@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import StaffLayout from './layouts/StaffLayout';
@@ -55,7 +55,7 @@ function RoleBasedDashboardRedirect() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         {/* Entry page: ALWAYS /login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -372,7 +372,7 @@ function App() {
         {/* Catch-all unknown paths */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
