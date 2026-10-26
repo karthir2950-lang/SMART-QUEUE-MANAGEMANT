@@ -1,0 +1,17 @@
+{
+  "name": "smart-queue-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "QueueLess AI - Universal Smart Queue & Appointment System",
+  "scripts": {
+    "dev": "npm --prefix smart-queue/frontend run dev",
+    "build": "npm --prefix smart-queue/frontend run build",
+    "start": "npm --prefix smart-queue/frontend run dev",
+    "backend": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --app-dir smart-queue/backend\"",
+    "test:oauth": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_google_oauth_redirect.py\"",
+    "test:portal": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_portal_separation.py\"",
+    "test:booking": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_booking_and_token_flow.py\"",
+    "test:step9": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_step9_comprehensive.py\"",
+    "test": "npm run test:oauth && npm run test:portal && npm run test:booking && npm run test:step9"
+  }
+}

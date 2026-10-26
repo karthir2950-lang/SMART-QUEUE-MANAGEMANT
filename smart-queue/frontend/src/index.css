@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #087F8C;
+  --color-text-main: #142E38;
+  --color-secondary: #526974;
+  --color-canvas: #F5F8FA;
+  --color-surface: #FFFFFF;
+  --color-border-subtle: #DCE6EA;
+  --color-caution: #8A5A15;
+  --color-destructive: #AE3C43;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+  --color-canvas: #F5F8FA;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8FAFC;
+  --color-text-main: #142E38;
+  --color-secondary: #526974;
+  --color-border-subtle: #DCE6EA;
+  --color-card-bg: #FFFFFF;
+  --color-input-bg: #FFFFFF;
+  --color-accent-subtle: #E6F4F5;
+}
+
+html.dark {
+  --color-canvas: #0F172A;
+  --color-surface: #1E293B;
+  --color-surface-hover: #283548;
+  --color-text-main: #F1F5F9;
+  --color-secondary: #94A3B8;
+  --color-border-subtle: #334155;
+  --color-card-bg: #1E293B;
+  --color-input-bg: #0F172A;
+  --color-accent-subtle: #132E3A;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-text-main);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
