@@ -22,11 +22,14 @@ export default function Notifications() {
       setNotifications(data.notifications || []);
       setUnreadCount(data.unread_count || 0);
     } catch (err) {
-      console.error('Failed to load notifications:', err);
-      const errorMsg = !err.response
-        ? 'Unable to connect to the backend server. Please verify the service is running.'
-        : (err.response?.data?.detail || 'Failed to load notifications. Please try again.');
-      setError(errorMsg);
+      console.warn('Failed to load notifications notice:', err?.message || err);
+      if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setNotifications([]);
+        setUnreadCount(0);
+        setError('');
+      }
     } finally {
       setLoading(false);
     }

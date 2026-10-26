@@ -5,8 +5,12 @@ export const queueService = {
    * Fetch current active queue token and live monitor state for authenticated user.
    */
   async getActiveToken() {
-    const res = await api.get('/api/queue/active');
-    return res.data;
+    try {
+      const res = await api.get('/api/queue/active');
+      return res.data;
+    } catch {
+      return null;
+    }
   },
 
   /**

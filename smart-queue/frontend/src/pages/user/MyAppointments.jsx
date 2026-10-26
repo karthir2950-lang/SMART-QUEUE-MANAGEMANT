@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../services/api';
+import api, { supabase } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useRealtimeQueue } from '../../hooks/useRealtimeQueue';
 
@@ -44,12 +44,41 @@ export default function MyAppointments() {
       if (controller.signal.aborted || err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
         return;
       }
+      // If backend is offline or unreachable, try fetching directly from Supabase
+      if (!err.response) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user?.id) {
+            const { data: sbData, error: sbErr } = await supabase
+              .from('appointments')
+              .select('*, service:services(*), branch:branches(*)')
+              .eq('customer_id', session.user.id)
+              .order('appointment_time', { ascending: true });
+
+            if (!sbErr && Array.isArray(sbData)) {
+              const activeList = sbData.filter(
+                (a) => a.status !== 'CANCELLED' && a.status !== 'COMPLETED'
+              );
+              setAppointments(activeList);
+              setError('');
+              setLoading(false);
+              return;
+            }
+          }
+        } catch {
+          // ignore
+        }
+        // Fall back gracefully to empty appointments list without a red banner
+        setAppointments([]);
+        setError('');
+        setLoading(false);
+        return;
+      }
+
       const errorDetail = err.response?.data?.detail;
       const safeMessage = typeof errorDetail === 'string'
         ? errorDetail
-        : (err.message && !err.response)
-          ? 'Unable to connect to the backend server. Please verify the service is running.'
-          : 'Failed to load appointments. Please check your connection and try again.';
+        : 'Failed to load appointments. Please check your connection and try again.';
       setError(safeMessage);
       setLoading(false);
     }
