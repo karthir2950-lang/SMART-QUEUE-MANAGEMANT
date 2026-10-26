@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 import { useRealtimeQueue } from '../hooks/useRealtimeQueue';
+import LiveClockBadge from '../components/common/LiveClockBadge';
 
 export default function UserLayout() {
   const location = useLocation();
@@ -246,9 +247,14 @@ export default function UserLayout() {
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Topbar */}
         <header className="bg-[var(--color-surface)] border-b border-[var(--color-border-subtle)] h-16 flex items-center justify-between px-6 sm:px-8 sticky top-0 z-30 transition-colors duration-200">
-          <h2 className="text-base sm:text-lg font-bold text-[var(--color-text-main)]">
-            {getPageTitle()}
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-base sm:text-lg font-bold text-[var(--color-text-main)]">
+              {getPageTitle()}
+            </h2>
+            <div className="hidden lg:block">
+              <LiveClockBadge compact={true} />
+            </div>
+          </div>
 
           <div className="flex items-center gap-3">
             {/* Live Notifications Bell */}

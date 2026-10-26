@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, exc, text, cast, Date
+from sqlalchemy import func, and_, or_, exc, text, cast, Date
 from datetime import datetime, date, time, timedelta, timezone
 import secrets
 import string
@@ -77,10 +77,28 @@ def get_active_user_queue_token(
     if customer_pid and customer_pid not in user_ids:
         user_ids.append(customer_pid)
 
-    # Find the earliest active appointment for this user (not CANCELLED and not COMPLETED)
+    now_dt = datetime.now()
+    now_date = now_dt.date()
+    now_time = now_dt.time().replace(microsecond=0)
+
+    # Find the earliest active, non-expired appointment for this user
+    # Exclude CANCELLED, COMPLETED, NO_SHOW, and SKIPPED
     appt = db.query(Appointment).filter(
         Appointment.user_id.in_(user_ids),
-        Appointment.status.notin_(['CANCELLED', 'COMPLETED'])
+        Appointment.status.notin_(['CANCELLED', 'COMPLETED', 'NO_SHOW', 'SKIPPED']),
+        or_(
+            Appointment.status.in_(['CALLED', 'SERVING', 'CHECKED_IN', 'WAITING']),
+            and_(
+                Appointment.status == 'BOOKED',
+                or_(
+                    Appointment.appointment_date > now_date,
+                    and_(
+                        Appointment.appointment_date == now_date,
+                        Appointment.appointment_time >= now_time
+                    )
+                )
+            )
+        )
     ).order_by(
         Appointment.appointment_date.asc(),
         Appointment.appointment_time.asc()
@@ -90,6 +108,9 @@ def get_active_user_queue_token(
         return None
 
     token = db.query(QueueToken).filter(QueueToken.appointment_id == appt.id).first()
+    if token and token.status in ('COMPLETED', 'CANCELLED', 'NO_SHOW', 'SKIPPED'):
+        return None
+
     if not token:
         if appt.status == 'BOOKED':
             token = issue_queue_token(db, appt, current_user.id)

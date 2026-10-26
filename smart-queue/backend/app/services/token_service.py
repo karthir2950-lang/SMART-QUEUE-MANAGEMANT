@@ -2,12 +2,25 @@ import uuid
 from uuid import UUID
 import secrets
 import string
+import re
 from datetime import datetime, date, timezone, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import text, cast, Date
 
 from app.models.domain import Appointment, Branch, Service, Sector, Organization, QueueToken, QueueEvent, QRToken, Counter
 from app.schemas.queue import QueueTokenResponse
+
+def token_sort_key(token_number: str):
+    """
+    Natural numeric sort key for queue token identifiers (e.g. 'A-2' before 'A-10').
+    Extracts alphanumeric prefix and numeric integer sequence.
+    """
+    if not token_number:
+        return ('', 0)
+    match = re.match(r'^([A-Za-z]+)[-_]?(\d+)$', str(token_number).strip())
+    if match:
+        return (match.group(1).upper(), int(match.group(2)))
+    return (str(token_number), 0)
 
 def get_token_prefix(sector_slug: str) -> str:
     slug = (sector_slug or '').lower()

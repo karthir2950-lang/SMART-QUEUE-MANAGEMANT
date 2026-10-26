@@ -4,6 +4,7 @@ import api from '../services/api';
 import queueService from '../services/queueService';
 import { useAuth } from '../context/AuthContext';
 import { useRealtimeQueue } from '../hooks/useRealtimeQueue';
+import LiveClockBadge from '../components/common/LiveClockBadge';
 
 const FALLBACK_SECTORS = [
   { id: '1', name: 'Healthcare', slug: 'healthcare', description: 'Hospitals, Clinics & Diagnostic Centers', icon: 'hospital', status: 'ACTIVE' },
@@ -175,8 +176,11 @@ export default function Dashboard() {
               </span>
 
               {lastQueueSync && (
-                <span className="text-[11px] text-[var(--color-secondary)]">
-                  {lastQueueSync.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                <span
+                  className="text-[11px] font-mono text-[var(--color-secondary)] bg-[var(--color-canvas)] px-2.5 py-1 rounded-lg border border-[var(--color-border-subtle)]"
+                  title="Last Database Queue Sync"
+                >
+                  🔄 Synced: {lastQueueSync.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
               )}
 
@@ -274,16 +278,21 @@ export default function Dashboard() {
       )}
 
       {/* Header / Hub Intro */}
-      <div className="mb-8">
-        <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]">
-          Sector Application Hub
-        </span>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--color-text-main)] mt-1">
-          Choose a Service
-        </h1>
-        <p className="text-[var(--color-secondary)] mt-2 text-sm sm:text-base">
-          Select your destination sector to view verified organizations, branches, and book queue tokens.
-        </p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]">
+            Sector Application Hub
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--color-text-main)] mt-1">
+            Choose a Service
+          </h1>
+          <p className="text-[var(--color-secondary)] mt-2 text-sm sm:text-base">
+            Select your destination sector to view verified organizations, branches, and book queue tokens.
+          </p>
+        </div>
+        <div className="flex-shrink-0">
+          <LiveClockBadge />
+        </div>
       </div>
 
       {/* Error state */}

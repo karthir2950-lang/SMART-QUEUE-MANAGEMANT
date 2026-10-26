@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npm --prefix smart-queue/frontend run dev",
     "build": "npm --prefix smart-queue/frontend run build",
-    "build:pages": "npm --prefix smart-queue/frontend run build && powershell -Command \"Copy-Item -Recurse -Force smart-queue/frontend/dist/* docs/; Copy-Item -Force smart-queue/frontend/dist/index.html index.html; Copy-Item -Force smart-queue/frontend/dist/index.html 404.html; Copy-Item -Recurse -Force smart-queue/frontend/dist/assets/* assets/\"",
+    "build:pages": "npm --prefix smart-queue/frontend run build && powershell -Command \"New-Item -ItemType Directory -Force docs/assets, assets; Remove-Item -Recurse -Force -ErrorAction SilentlyContinue docs/assets/*, assets/*; Copy-Item -Recurse -Force smart-queue/frontend/dist/* -Destination docs; Copy-Item -Force smart-queue/frontend/dist/index.html -Destination index.html; Copy-Item -Force smart-queue/frontend/dist/index.html -Destination 404.html; Copy-Item -Recurse -Force smart-queue/frontend/dist/assets/* -Destination assets\"",
     "start": "npm --prefix smart-queue/frontend run dev",
     "backend": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --app-dir smart-queue/backend\"",
     "test:oauth": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_google_oauth_redirect.py\"",
@@ -15,6 +15,8 @@
     "test:step9": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_step9_comprehensive.py\"",
     "test:expiry": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_appointment_expiry_filter.py\"",
     "test:frontend-expiry": "npm --prefix smart-queue/frontend test",
-    "test": "npm run test:oauth && npm run test:portal && npm run test:booking && npm run test:step9 && npm run test:expiry"
+    "test:queue-order": "node smart-queue/frontend/test_queue_order_and_datetime.js",
+    "test:backend-queue": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_backend_queue_order.py\"",
+    "test": "npm run test:oauth && npm run test:portal && npm run test:booking && npm run test:step9 && npm run test:expiry && npm run test:queue-order && npm run test:backend-queue"
   }
 }

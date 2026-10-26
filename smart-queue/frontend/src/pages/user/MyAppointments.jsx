@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useRealtimeQueue } from '../../hooks/useRealtimeQueue';
 
 import { isAppointmentValidAndUpcoming } from '../../utils/appointmentUtils';
+import { sortAppointmentsChronological } from '../../utils/queueOrderUtils';
+import LiveClockBadge from '../../components/common/LiveClockBadge';
 
 export { isAppointmentValidAndUpcoming };
 
@@ -37,7 +39,9 @@ export default function MyAppointments() {
       });
       if (!controller.signal.aborted) {
         const rawList = Array.isArray(res.data) ? res.data : [];
-        const activeList = rawList.filter(isAppointmentValidAndUpcoming);
+        const activeList = sortAppointmentsChronological(
+          rawList.filter(isAppointmentValidAndUpcoming)
+        );
         setAppointments(activeList);
         setError('');
         setLoading(false);
@@ -56,10 +60,13 @@ export default function MyAppointments() {
               .select('*, service:services(*), branch:branches(*)')
               .eq('customer_id', session.user.id)
               .eq('status', 'BOOKED')
+              .order('appointment_date', { ascending: true })
               .order('appointment_time', { ascending: true });
 
             if (!sbErr && Array.isArray(sbData)) {
-              const activeList = sbData.filter(isAppointmentValidAndUpcoming);
+              const activeList = sortAppointmentsChronological(
+                sbData.filter(isAppointmentValidAndUpcoming)
+              );
               setAppointments(activeList);
               setError('');
               setLoading(false);
@@ -116,7 +123,9 @@ export default function MyAppointments() {
         setAppointments((prev) => prev.filter((a) => a.id !== updatedAppt.id));
       } else {
         setAppointments((prev) =>
-          prev.map((a) => (a.id === updatedAppt.id ? { ...a, ...updatedAppt } : a))
+          sortAppointmentsChronological(
+            prev.map((a) => (a.id === updatedAppt.id ? { ...a, ...updatedAppt } : a))
+          )
         );
       }
     }, []),
@@ -179,16 +188,21 @@ export default function MyAppointments() {
 
   return (
     <div className="max-w-4xl mx-auto pb-12">
-      <div className="mb-8">
-        <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]">
-          Queue History
-        </span>
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text-main)] mt-1">
-          My Appointments
-        </h1>
-        <p className="text-[var(--color-secondary)] mt-1 text-sm">
-          Track active queue tokens, view details, and manage appointments.
-        </p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-widest text-[var(--color-primary)]">
+            Queue History
+          </span>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--color-text-main)] mt-1">
+            My Appointments
+          </h1>
+          <p className="text-[var(--color-secondary)] mt-1 text-sm">
+            Track active queue tokens, view details, and manage appointments.
+          </p>
+        </div>
+        <div className="flex-shrink-0">
+          <LiveClockBadge />
+        </div>
       </div>
 
       {successMessage && (
