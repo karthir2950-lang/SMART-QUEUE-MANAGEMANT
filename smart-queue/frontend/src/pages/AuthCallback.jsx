@@ -17,28 +17,35 @@ export default function AuthCallback() {
       if (processedRef.current) return;
       processedRef.current = true;
 
-      // 1. Check for provider OAuth errors in search params or hash
-      const queryError = searchParams.get('error_description') || searchParams.get('error');
+      // 1. Check for provider OAuth errors in search params, outer window query, or hash
+      const winSearch = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+      const rawHash = typeof window !== 'undefined' && window.location.hash
+        ? (window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash)
+        : '';
+      const hashParams = rawHash.includes('?') 
+        ? new URLSearchParams(rawHash.split('?')[1]) 
+        : new URLSearchParams(rawHash);
+
+      const queryError = searchParams.get('error_description') || searchParams.get('error')
+        || winSearch.get('error_description') || winSearch.get('error')
+        || hashParams.get('error_description') || hashParams.get('error');
+
       if (queryError) {
-        const isCancel = searchParams.get('error') === 'access_denied';
+        const isCancel = queryError === 'access_denied' || queryError.includes('access_denied') || winSearch.get('error') === 'access_denied';
         setErrorMessage(isCancel ? 'Authentication was cancelled by the user.' : queryError);
         return;
       }
 
-      const rawHash = typeof window !== 'undefined' && window.location.hash
-        ? (window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash)
-        : '';
-      if (rawHash) {
-        const hashParams = new URLSearchParams(rawHash);
-        const hashError = hashParams.get('error_description') || hashParams.get('error');
-        if (hashError) {
-          const isCancel = hashParams.get('error') === 'access_denied';
-          setErrorMessage(isCancel ? 'Authentication was cancelled by the user.' : hashError);
-          return;
+      const code = searchParams.get('code') || winSearch.get('code') || hashParams.get('code');
+
+      // Clean up outer query string to prevent replay/loop on refresh
+      if (typeof window !== 'undefined' && window.location.search) {
+        try {
+          window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+        } catch {
+          // ignore
         }
       }
-
-      const code = searchParams.get('code');
 
       console.log('[AuthCallback] Processing callback. Query has code:', Boolean(code), 'localStorage keys:', Object.keys(localStorage));
 

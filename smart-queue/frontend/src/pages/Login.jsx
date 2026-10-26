@@ -45,10 +45,24 @@ export default function Login() {
     if (isSigningUpRef.current) return;
 
     // If an OAuth callback is being processed in URL, delegate to /auth/callback
-    const hasOAuth = typeof window !== 'undefined' && 
-      (window.location.hash.includes('access_token=') || searchParams.has('code'));
+    const winSearch = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const hashStr = typeof window !== 'undefined' ? window.location.hash : '';
+    const hashQuery = hashStr.includes('?') 
+      ? new URLSearchParams(hashStr.split('?')[1]) 
+      : new URLSearchParams(hashStr.startsWith('#') ? hashStr.slice(1) : hashStr);
+
+    const codeVal = searchParams.get('code') || winSearch?.get('code') || hashQuery.get('code');
+    const errVal = searchParams.get('error') || winSearch?.get('error') || hashQuery.get('error');
+    const errDesc = searchParams.get('error_description') || winSearch?.get('error_description') || hashQuery.get('error_description');
+
+    const hasOAuth = Boolean(codeVal || errVal || errDesc || hashStr.includes('access_token='));
     if (hasOAuth) {
-      navigate(`/auth/callback${window.location.search}${window.location.hash}`, { replace: true });
+      const q = new URLSearchParams();
+      if (codeVal) q.set('code', codeVal);
+      if (errVal) q.set('error', errVal);
+      if (errDesc) q.set('error_description', errDesc);
+      const queryStr = q.toString() ? `?${q.toString()}` : '';
+      navigate(`/auth/callback${queryStr}`, { replace: true });
       return;
     }
 
