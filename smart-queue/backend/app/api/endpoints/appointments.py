@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, and_, cast, Date, text
+from sqlalchemy import func, and_, or_, cast, Date, text
 from datetime import datetime, date, time, timedelta
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from app.db.database import get_db
@@ -178,7 +178,9 @@ def create_appointment(
 
 @router.get("/user", response_model=List[AppointmentResponse])
 def get_user_appointments(
+    status: Optional[str] = Query(None, description="Filter by status (default BOOKED)"),
     include_completed: bool = Query(False, description="Include completed appointments in the response"),
+    include_expired: bool = Query(False, description="Include expired appointments in the response"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -193,14 +195,37 @@ def get_user_appointments(
         joinedload(Appointment.branch),
         joinedload(Appointment.service)
     ).filter(
-        Appointment.user_id.in_(user_ids),
-        Appointment.status != 'CANCELLED'
+        Appointment.user_id.in_(user_ids)
     )
 
-    if not include_completed:
-        query = query.filter(Appointment.status != 'COMPLETED')
+    # 1. Authoritative Status Filter:
+    # An appointment should appear only if its status is strictly BOOKED.
+    # Exclude CANCELLED, COMPLETED, NO_SHOW, SKIPPED, and any other non-BOOKED statuses.
+    if include_completed:
+        query = query.filter(Appointment.status != 'CANCELLED')
+    elif status:
+        query = query.filter(Appointment.status == status)
+    else:
+        query = query.filter(Appointment.status == 'BOOKED')
 
-    apps = query.order_by(Appointment.appointment_date.desc(), Appointment.appointment_time.desc()).all()
+    # 2. Authoritative Expiry Date/Time Filter:
+    # Scheduled appointment date and time must be >= current time in local timezone.
+    if not include_expired and not include_completed:
+        now_dt = datetime.now()
+        now_date = now_dt.date()
+        now_time = now_dt.time().replace(microsecond=0)
+
+        query = query.filter(
+            or_(
+                Appointment.appointment_date > now_date,
+                and_(
+                    Appointment.appointment_date == now_date,
+                    Appointment.appointment_time >= now_time
+                )
+            )
+        )
+
+    apps = query.order_by(Appointment.appointment_date.asc(), Appointment.appointment_time.asc()).all()
     
     app_ids = [app.id for app in apps]
     tokens = {
@@ -212,7 +237,7 @@ def get_user_appointments(
     has_new_tokens = False
     for app in apps:
         token = tokens.get(app.id)
-        if not include_completed and token and token.status == 'COMPLETED':
+        if not include_completed and token and token.status in ('COMPLETED', 'CANCELLED', 'NO_SHOW', 'SKIPPED'):
             continue
 
         if not token and app.status == 'BOOKED':

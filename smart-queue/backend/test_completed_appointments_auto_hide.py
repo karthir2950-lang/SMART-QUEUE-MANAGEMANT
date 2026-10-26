@@ -65,11 +65,14 @@ def run_tests():
         sector = db.query(Sector).filter(Sector.id == service.sector_id).first()
         today = date.today()
 
+        future_time_1 = (datetime.now() + timedelta(hours=2)).time().replace(microsecond=0)
+        future_time_2 = (datetime.now() + timedelta(hours=3)).time().replace(microsecond=0)
+
         # Clean prior test slot appointments
         db.query(Appointment).filter(
             Appointment.appointment_date == today,
             Appointment.user_id.in_([reg_user_a.id, reg_user_b.id]),
-            Appointment.appointment_time.in_([dt_time(6, 15), dt_time(6, 30)])
+            Appointment.appointment_time.in_([future_time_1, future_time_2, dt_time(6, 15), dt_time(6, 30)])
         ).update({"status": "CANCELLED"}, synchronize_session=False)
         db.commit()
 
@@ -86,7 +89,7 @@ def run_tests():
             branch_id=branch_id,
             service_id=service.id,
             appointment_date=today,
-            appointment_time=dt_time(6, 15),
+            appointment_time=future_time_1,
             status="BOOKED"
         )
         db.add(appt_a)
@@ -194,7 +197,7 @@ def run_tests():
             branch_id=branch_id,
             service_id=service.id,
             appointment_date=today,
-            appointment_time=dt_time(6, 30),
+            appointment_time=future_time_2,
             status="BOOKED"
         )
         db.add(appt_2)

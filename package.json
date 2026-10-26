@@ -13,6 +13,8 @@
     "test:portal": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_portal_separation.py\"",
     "test:booking": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_booking_and_token_flow.py\"",
     "test:step9": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_step9_comprehensive.py\"",
-    "test": "npm run test:oauth && npm run test:portal && npm run test:booking && npm run test:step9"
+    "test:expiry": "powershell -Command \"& 'smart-queue/backend/.venv/Scripts/python.exe' smart-queue/backend/test_appointment_expiry_filter.py\"",
+    "test:frontend-expiry": "npm --prefix smart-queue/frontend test",
+    "test": "npm run test:oauth && npm run test:portal && npm run test:booking && npm run test:step9 && npm run test:expiry"
   }
 }

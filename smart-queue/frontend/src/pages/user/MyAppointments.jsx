@@ -4,6 +4,10 @@ import api, { supabase } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useRealtimeQueue } from '../../hooks/useRealtimeQueue';
 
+import { isAppointmentValidAndUpcoming } from '../../utils/appointmentUtils';
+
+export { isAppointmentValidAndUpcoming };
+
 export default function MyAppointments() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState([]);
@@ -33,9 +37,7 @@ export default function MyAppointments() {
       });
       if (!controller.signal.aborted) {
         const rawList = Array.isArray(res.data) ? res.data : [];
-        const activeList = rawList.filter(
-          (a) => a.status !== 'CANCELLED' && a.status !== 'COMPLETED'
-        );
+        const activeList = rawList.filter(isAppointmentValidAndUpcoming);
         setAppointments(activeList);
         setError('');
         setLoading(false);
@@ -53,12 +55,11 @@ export default function MyAppointments() {
               .from('appointments')
               .select('*, service:services(*), branch:branches(*)')
               .eq('customer_id', session.user.id)
+              .eq('status', 'BOOKED')
               .order('appointment_time', { ascending: true });
 
             if (!sbErr && Array.isArray(sbData)) {
-              const activeList = sbData.filter(
-                (a) => a.status !== 'CANCELLED' && a.status !== 'COMPLETED'
-              );
+              const activeList = sbData.filter(isAppointmentValidAndUpcoming);
               setAppointments(activeList);
               setError('');
               setLoading(false);
@@ -68,11 +69,6 @@ export default function MyAppointments() {
         } catch {
           // ignore
         }
-        // Fall back gracefully to empty appointments list without a red banner
-        setAppointments([]);
-        setError('');
-        setLoading(false);
-        return;
       }
 
       const errorDetail = err.response?.data?.detail;
@@ -93,12 +89,30 @@ export default function MyAppointments() {
     };
   }, [fetchAppointments]);
 
+  // Phase 4: Dynamic Auto-Removal Timer
+  // If an appointment's scheduled time passes while the page remains open,
+  // remove it automatically without requiring a manual refresh.
+  // Cleans up on unmount and avoids unnecessary rerenders.
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      setAppointments((prev) => {
+        const validList = prev.filter(isAppointmentValidAndUpcoming);
+        if (validList.length !== prev.length) {
+          return validList;
+        }
+        return prev;
+      });
+    }, 5000);
+
+    return () => clearInterval(timerId);
+  }, []);
+
   // Real-time synchronization for appointment and queue updates
   useRealtimeQueue({
     userId: user?.id,
     onAppointmentUpdate: useCallback((updatedAppt) => {
       if (!updatedAppt || !updatedAppt.id) return;
-      if (updatedAppt.status === 'CANCELLED' || updatedAppt.status === 'COMPLETED') {
+      if (updatedAppt.status !== 'BOOKED' || !isAppointmentValidAndUpcoming(updatedAppt)) {
         setAppointments((prev) => prev.filter((a) => a.id !== updatedAppt.id));
       } else {
         setAppointments((prev) =>
@@ -108,7 +122,7 @@ export default function MyAppointments() {
     }, []),
     onTokenUpdate: useCallback((token) => {
       if (!token) return;
-      if (token.status === 'COMPLETED' || token.status === 'CANCELLED') {
+      if (['COMPLETED', 'CANCELLED', 'NO_SHOW', 'SKIPPED'].includes(token.status)) {
         setAppointments((prev) =>
           prev.filter((a) => a.id !== token.appointment_id && a.queue_token_id !== (token.id || token.token_id))
         );
@@ -221,7 +235,7 @@ export default function MyAppointments() {
         {!loading && !error && appointments.length === 0 && (
           <div className="bg-[var(--color-surface)] p-10 rounded-[22px] border border-[var(--color-border-subtle)] text-center text-[var(--color-secondary)] shadow-xs">
             <p className="font-bold text-base text-[var(--color-text-main)] mb-1">
-              You don't have any active appointments
+              You don't have any upcoming booked appointments.
             </p>
             <p className="text-xs mb-6">
               Choose a sector in the application hub to schedule your visit.
