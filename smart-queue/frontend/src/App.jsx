@@ -55,7 +55,7 @@ function RoleBasedDashboardRedirect() {
 
 function App() {
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL}>
       <Routes>
         {/* Entry page: ALWAYS /login */}
         <Route path="/" element={<Navigate to="/login" replace />} />

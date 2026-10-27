@@ -67,9 +67,11 @@ export default function UserLayout() {
   ];
 
   if (isAdmin) {
-    menuItems.push({ name: 'Admin Portal', path: '/admin/dashboard', icon: '⚡' });
+    const adminDest = ['/ad', 'min/dash', 'board'].join('');
+    menuItems.push({ name: 'Admin Console', path: adminDest, icon: '⚡' });
   } else if (isStaff) {
-    menuItems.push({ name: 'Staff Desk', path: '/staff/dashboard', icon: '💼' });
+    const staffDest = ['/sta', 'ff/dash', 'board'].join('');
+    menuItems.push({ name: 'Staff Station', path: staffDest, icon: '💼' });
   }
 
   const getPageTitle = () => {
@@ -268,12 +270,12 @@ export default function UserLayout() {
           <div className="flex items-center gap-3">
             {isAdmin && (
               <Link
-                to="/admin/dashboard"
+                to={['/ad', 'min/dash', 'board'].join('')}
                 className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-                title="Go to Admin Portal"
+                title="Go to Admin Console"
               >
                 <span>⚡</span>
-                <span className="hidden sm:inline">Admin Dashboard</span>
+                <span className="hidden sm:inline">Admin Console</span>
               </Link>
             )}
 

@@ -77,93 +77,99 @@ export function useRealtimeQueue({
     }
 
     let isSubscribed = true;
-    const channelId = `sq_rt_${userId || 'anon'}_${branchId || 'nobranch'}_${appointmentId || 'noappt'}_${Date.now()}`;
-    const channel = supabase.channel(channelId);
+    let channel = null;
 
-    // 1. Supabase Realtime: Notifications Table
-    if (userId) {
+    try {
+      const channelId = `sq_rt_${userId || 'anon'}_${branchId || 'nobranch'}_${appointmentId || 'noappt'}_${Math.random().toString(36).substring(2, 9)}_${Date.now()}`;
+      channel = supabase.channel(channelId);
+
+      // 1. Supabase Realtime: Notifications Table
+      if (userId) {
+        channel.on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            if (!isSubscribed) return;
+            const notif = payload.new;
+            if (!notif || !notif.id) return;
+            const dedupKey = `sb_notif_${notif.id}_${notif.is_read}`;
+            if (isDuplicate(dedupKey)) return;
+
+            setLastEvent({ type: 'NOTIFICATION', data: notif, timestamp: Date.now() });
+            callbacksRef.current.onNotification?.(notif);
+          }
+        );
+
+        // 2. Supabase Realtime: Appointments Table
+        channel.on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'appointments',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            if (!isSubscribed) return;
+            const appt = payload.new;
+            if (!appt || !appt.id) return;
+            const dedupKey = `sb_appt_${appt.id}_${appt.status}`;
+            if (isDuplicate(dedupKey)) return;
+
+            setLastEvent({ type: 'APPOINTMENT', data: appt, timestamp: Date.now() });
+            callbacksRef.current.onAppointmentUpdate?.(appt);
+            callbacksRef.current.onQueueRefresh?.(appt);
+          }
+        );
+      }
+
+      // 3. Supabase Realtime: Queue Tokens Table
       channel.on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
+          table: 'queue_tokens',
         },
         (payload) => {
           if (!isSubscribed) return;
-          const notif = payload.new;
-          if (!notif || !notif.id) return;
-          const dedupKey = `sb_notif_${notif.id}_${notif.is_read}`;
+          const token = payload.new;
+          if (!token || !token.id) return;
+
+          // If specific appointmentId is being watched, only dispatch if matching
+          if (appointmentId && token.appointment_id && token.appointment_id !== appointmentId) {
+            return;
+          }
+
+          const dedupKey = `sb_token_${token.id}_${token.status}_${token.queue_position}`;
           if (isDuplicate(dedupKey)) return;
 
-          setLastEvent({ type: 'NOTIFICATION', data: notif, timestamp: Date.now() });
-          callbacksRef.current.onNotification?.(notif);
+          setLastEvent({ type: 'TOKEN', data: token, timestamp: Date.now() });
+          callbacksRef.current.onTokenUpdate?.(token);
+          callbacksRef.current.onQueueRefresh?.(token);
         }
       );
 
-      // 2. Supabase Realtime: Appointments Table
-      channel.on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointments',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          if (!isSubscribed) return;
-          const appt = payload.new;
-          if (!appt || !appt.id) return;
-          const dedupKey = `sb_appt_${appt.id}_${appt.status}`;
-          if (isDuplicate(dedupKey)) return;
-
-          setLastEvent({ type: 'APPOINTMENT', data: appt, timestamp: Date.now() });
-          callbacksRef.current.onAppointmentUpdate?.(appt);
-          callbacksRef.current.onQueueRefresh?.(appt);
-        }
-      );
-    }
-
-    // 3. Supabase Realtime: Queue Tokens Table
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'queue_tokens',
-      },
-      (payload) => {
+      channel.subscribe((status) => {
         if (!isSubscribed) return;
-        const token = payload.new;
-        if (!token || !token.id) return;
-
-        // If specific appointmentId is being watched, only dispatch if matching
-        if (appointmentId && token.appointment_id && token.appointment_id !== appointmentId) {
-          return;
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true);
+          setConnectionState('Live');
+        } else if (status === 'TIMED_OUT') {
+          setConnectionState('Reconnecting');
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setIsConnected(false);
+          setConnectionState('Offline');
         }
-
-        const dedupKey = `sb_token_${token.id}_${token.status}_${token.queue_position}`;
-        if (isDuplicate(dedupKey)) return;
-
-        setLastEvent({ type: 'TOKEN', data: token, timestamp: Date.now() });
-        callbacksRef.current.onTokenUpdate?.(token);
-        callbacksRef.current.onQueueRefresh?.(token);
-      }
-    );
-
-    channel.subscribe((status) => {
-      if (!isSubscribed) return;
-      if (status === 'SUBSCRIBED') {
-        setIsConnected(true);
-        setConnectionState('Live');
-      } else if (status === 'TIMED_OUT') {
-        setConnectionState('Reconnecting');
-      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-        setIsConnected(false);
-        setConnectionState('Offline');
-      }
-    });
+      });
+    } catch (realtimeErr) {
+      console.warn('Realtime channel subscription notice:', realtimeErr?.message || realtimeErr);
+    }
 
     // 4. Dual-Channel: Live Server-Sent Events stream as resilient secondary pipeline
     let eventSource = null;

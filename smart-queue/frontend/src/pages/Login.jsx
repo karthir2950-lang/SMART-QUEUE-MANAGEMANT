@@ -101,10 +101,13 @@ export default function Login() {
     try {
       localStorage.removeItem('sq_auth_token');
       console.log('[Auth] Initiating Google OAuth PKCE flow. Pre-OAuth storage keys:', Object.keys(localStorage));
+      const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+      const redirectUri = `${window.location.origin}${basePath}/auth/callback`;
+      // redirectTo: `${window.location.origin}/auth/callback` (supported with basePath)
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: redirectUri
         }
       });
       console.log('[Auth] signInWithOAuth complete. Post-OAuth storage keys:', Object.keys(localStorage));

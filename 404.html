@@ -6,8 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QueueLess AI - Smart Queue & Appointment System</title>
     <meta name="description" content="Universal Smart Queue & Appointment System with Real-Time Monitoring and AI Wait Time Predictions" />
-    <script type="module" crossorigin src="./assets/index-C77W4w8B.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CGyJlBt0.css">
+    <script>
+      (function() {
+        var base = '/SMART-QUEUE-MANAGEMANT/';
+        var path = window.location.pathname;
+        var search = window.location.search || '';
+        var hash = window.location.hash || '';
+
+        // If redirected with ?code= or ?error= from OAuth, route directly to HashRouter's auth callback
+        if (search && (search.indexOf('code=') !== -1 || search.indexOf('error=') !== -1)) {
+          if (!hash || hash === '#/' || hash === '#/login') {
+            window.location.replace(base + '#/auth/callback' + search);
+            return;
+          }
+        }
+
+        // If direct deep route accessed without hash (e.g. /SMART-QUEUE-MANAGEMANT/login), convert to hash route
+        if (path.indexOf(base) === 0 && path.length > base.length) {
+          var route = path.slice(base.length);
+          window.location.replace(base + '#/' + route + search + hash);
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/SMART-QUEUE-MANAGEMANT/assets/index-C3EaIpas.js"></script>
+    <link rel="stylesheet" crossorigin href="/SMART-QUEUE-MANAGEMANT/assets/index-BVyC7hBh.css">
   </head>
   <body>
     <div id="root"></div>

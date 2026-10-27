@@ -154,6 +154,15 @@ export default function AuthCallback() {
         // If an account is registered with the ADMIN role, its database role remains strictly ADMIN (never downgraded or overwritten).
         // The authenticated ADMIN is redirected to /user/dashboard to browse sectors and book appointments.
         // Administrative APIs and /admin/dashboard remain strictly protected by backend authorization.
+        if (typeof window !== 'undefined' && window.location.pathname.includes('/auth/callback')) {
+          const basePath = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+          const cleanPath = basePath ? `${basePath}/` : '/';
+          try {
+            window.history.replaceState({}, document.title, `${cleanPath}#/user/dashboard`);
+          } catch {
+            // ignore
+          }
+        }
         navigate('/user/dashboard', { replace: true });
       } catch (err) {
         console.error('OAuth callback processing failed:', err);

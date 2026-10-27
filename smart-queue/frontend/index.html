@@ -6,6 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QueueLess AI - Smart Queue & Appointment System</title>
     <meta name="description" content="Universal Smart Queue & Appointment System with Real-Time Monitoring and AI Wait Time Predictions" />
+    <script>
+      (function() {
+        var base = window.location.pathname.startsWith('/SMART-QUEUE-MANAGEMANT') ? '/SMART-QUEUE-MANAGEMANT/' : '/';
+        var search = window.location.search || '';
+        var hash = window.location.hash || '';
+
+        if (search && (search.indexOf('code=') !== -1 || search.indexOf('error=') !== -1)) {
+          if (!hash || hash === '#/' || hash === '#/login') {
+            window.location.replace(base + '#/auth/callback' + search);
+          }
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

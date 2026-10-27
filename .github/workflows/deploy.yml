@@ -38,9 +38,11 @@ jobs:
       - name: Build frontend
         run: npm run build
         working-directory: smart-queue/frontend
+        env:
+          VITE_BASE_PATH: '/SMART-QUEUE-MANAGEMANT/'
 
       - name: Copy 404.html for SPA fallback
-        run: cp smart-queue/frontend/dist/index.html smart-queue/frontend/dist/404.html
+        run: cp 404.html smart-queue/frontend/dist/404.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
