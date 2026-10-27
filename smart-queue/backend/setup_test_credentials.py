@@ -137,6 +137,62 @@ try:
         ON CONFLICT (provider_id, provider) DO NOTHING;
     """), {"uid": user_record.id, "uid_str": str(user_record.id)})
 
+    # 5. Ensure admin@smartqueue.test in public.users and auth.users
+    admin_record = db.query(User).filter(User.email == 'admin@smartqueue.test').first()
+    if not admin_record:
+        import uuid
+        admin_record = User(
+            id=uuid.uuid4(),
+            name="System Administrator",
+            email="admin@smartqueue.test",
+            phone="9876543212",
+            role="ADMIN",
+            status="ACTIVE"
+        )
+        db.add(admin_record)
+        db.commit()
+        db.refresh(admin_record)
+
+    db.execute(text("""
+        INSERT INTO auth.users (
+            id, instance_id, email, encrypted_password, email_confirmed_at,
+            raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud
+        )
+        VALUES (
+            :uid,
+            '00000000-0000-0000-0000-000000000000',
+            'admin@smartqueue.test',
+            crypt('Admin@123456', gen_salt('bf')),
+            NOW(),
+            '{"provider":"email","providers":["email"]}'::jsonb,
+            '{"name":"System Administrator"}'::jsonb,
+            NOW(),
+            NOW(),
+            'authenticated',
+            'authenticated'
+        )
+        ON CONFLICT (id) DO UPDATE 
+        SET encrypted_password = crypt('Admin@123456', gen_salt('bf')),
+            email_confirmed_at = NOW();
+    """), {"uid": admin_record.id})
+
+    db.execute(text("""
+        INSERT INTO auth.identities (
+            id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+        )
+        VALUES (
+            uuid_generate_v4(),
+            :uid_str,
+            :uid,
+            json_build_object('sub', :uid_str, 'email', 'admin@smartqueue.test', 'name', 'System Administrator', 'full_name', 'System Administrator', 'email_verified', true)::jsonb,
+            'email',
+            NOW(),
+            NOW(),
+            NOW()
+        )
+        ON CONFLICT (provider_id, provider) DO NOTHING;
+    """), {"uid": admin_record.id, "uid_str": str(admin_record.id)})
+
     # Also update admin password to Admin@123456 for madheshr406@gmail.com and karthir2950@gmail.com
     db.execute(text("""
         UPDATE auth.users 
@@ -147,7 +203,7 @@ try:
 
     db.commit()
     print("SUCCESS: Configured credentials!")
-    print("Admin: madheshr406@gmail.com or karthir2950@gmail.com / Admin@123456")
+    print("Admin: admin@smartqueue.test (or madheshr406@gmail.com / karthir2950@gmail.com) / Admin@123456")
     print("Staff: staff@smartqueue.test / Staff@123456")
     print("User:  user@smartqueue.test / User@123456")
 except Exception as e:

@@ -58,7 +58,7 @@ export default function MyAppointments() {
             const { data: sbData, error: sbErr } = await supabase
               .from('appointments')
               .select('*, service:services(*), branch:branches(*)')
-              .eq('customer_id', session.user.id)
+              .eq('user_id', session.user.id)
               .eq('status', 'BOOKED')
               .order('appointment_date', { ascending: true })
               .order('appointment_time', { ascending: true });

@@ -54,7 +54,10 @@ export default function UserLayout() {
     }, [fetchUnread]),
   });
 
-  // Strictly citizen user-facing navigation items:
+  const isAdmin = profile?.role === 'ADMIN';
+  const isStaff = profile?.role === 'STAFF';
+
+  // Navigation items:
   const menuItems = [
     { name: 'Dashboard', path: '/user/dashboard', icon: '🏠' },
     { name: 'My Appointments', path: '/user/appointments', icon: '📅' },
@@ -62,6 +65,12 @@ export default function UserLayout() {
     { name: 'Settings', path: '/settings', icon: '⚙️' },
     { name: 'Profile', path: '/user/profile', icon: '👤' },
   ];
+
+  if (isAdmin) {
+    menuItems.push({ name: 'Admin Portal', path: '/admin/dashboard', icon: '⚡' });
+  } else if (isStaff) {
+    menuItems.push({ name: 'Staff Desk', path: '/staff/dashboard', icon: '💼' });
+  }
 
   const getPageTitle = () => {
     if (location.pathname.startsWith('/sector')) return 'Sector Application Hub';
@@ -257,6 +266,17 @@ export default function UserLayout() {
           </div>
 
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Link
+                to="/admin/dashboard"
+                className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                title="Go to Admin Portal"
+              >
+                <span>⚡</span>
+                <span className="hidden sm:inline">Admin Dashboard</span>
+              </Link>
+            )}
+
             {/* Live Notifications Bell */}
             <Link
               to="/user/notifications"

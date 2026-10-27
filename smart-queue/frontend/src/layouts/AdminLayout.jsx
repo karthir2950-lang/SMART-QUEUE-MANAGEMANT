@@ -210,6 +210,15 @@ export default function AdminLayout() {
           </h2>
 
           <div className="flex items-center gap-3">
+            <Link
+              to="/user/dashboard"
+              className="px-3 py-1.5 rounded-xl border border-[var(--color-border-subtle)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-main)] text-xs font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              title="Go to User Portal"
+            >
+              <span>👤</span>
+              <span className="hidden sm:inline">User Portal</span>
+            </Link>
+
             <span className="hidden sm:inline text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
               Admin Mode
             </span>

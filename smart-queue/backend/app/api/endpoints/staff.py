@@ -617,6 +617,9 @@ def staff_complete_serving(
         notify_service_completed(db, token, token.appointment)
         if token.appointment:
             dispatch_approaching_queue_alerts(db, staff.branch_id, token.appointment.appointment_date)
+        if token.appointment_id:
+            from app.services.reminder_service import cancel_appointment_reminders
+            cancel_appointment_reminders(db, token.appointment_id)
         broadcaster.broadcast_sync_branch(str(staff.branch_id), {
             "event": "QUEUE_UPDATED",
             "action": "complete",
@@ -689,6 +692,9 @@ def staff_skip_token(
         notify_token_skipped(db, token, token.appointment)
         if token.appointment:
             dispatch_approaching_queue_alerts(db, staff.branch_id, token.appointment.appointment_date)
+        if token.appointment_id:
+            from app.services.reminder_service import cancel_appointment_reminders
+            cancel_appointment_reminders(db, token.appointment_id)
         broadcaster.broadcast_sync_branch(str(staff.branch_id), {
             "event": "QUEUE_UPDATED",
             "action": "skip",
@@ -761,6 +767,9 @@ def staff_mark_no_show(
         notify_token_no_show(db, token, token.appointment)
         if token.appointment:
             dispatch_approaching_queue_alerts(db, staff.branch_id, token.appointment.appointment_date)
+        if token.appointment_id:
+            from app.services.reminder_service import cancel_appointment_reminders
+            cancel_appointment_reminders(db, token.appointment_id)
         broadcaster.broadcast_sync_branch(str(staff.branch_id), {
             "event": "QUEUE_UPDATED",
             "action": "no_show",

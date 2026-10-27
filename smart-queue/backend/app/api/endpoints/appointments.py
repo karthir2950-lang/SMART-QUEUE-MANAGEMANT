@@ -7,9 +7,10 @@ from uuid import UUID
 
 from app.db.database import get_db
 from app.core.security import get_current_user
-from app.models.domain import User, Appointment, Branch, Service, Sector, Organization, Counter, QueueToken, QueueEvent
-from app.schemas.appointment import AppointmentCreate, AppointmentResponse, AvailableSlot
+from app.models.domain import User, Appointment, Branch, Service, Sector, Organization, Counter, QueueToken, QueueEvent, AppointmentReminder
+from app.schemas.appointment import AppointmentCreate, AppointmentResponse, AvailableSlot, AppointmentReschedule, AppointmentReminderResponse
 from app.services.token_service import issue_queue_token
+from app.services.reminder_service import schedule_appointment_reminders, cancel_appointment_reminders, reschedule_appointment_reminders, process_due_reminders
 
 router = APIRouter()
 
@@ -156,6 +157,12 @@ def create_appointment(
             "appointment_id": str(new_app.id),
             "token_id": str(token.id) if token else None
         })
+    except Exception:
+        pass
+
+    # Schedule durable smart appointment reminders (T-120, T-90, T-60, T-30)
+    try:
+        schedule_appointment_reminders(db, new_app)
     except Exception:
         pass
 
@@ -359,6 +366,99 @@ def cancel_appointment(
     except Exception:
         pass
 
+    # Cancel pending reminders
+    try:
+        cancel_appointment_reminders(db, app.id)
+    except Exception:
+        pass
+
     db.commit()
     
     return {"message": "Appointment cancelled successfully"}
+
+@router.post("/{appointment_id}/reschedule", response_model=AppointmentResponse)
+def reschedule_appointment(
+    appointment_id: UUID,
+    reschedule_in: AppointmentReschedule,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    app = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not app:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+        
+    user_ids = [current_user.id]
+    customer_pid = getattr(current_user, 'customer_profile_id', None)
+    if customer_pid and customer_pid not in user_ids:
+        user_ids.append(customer_pid)
+
+    if app.user_id not in user_ids and current_user.role not in ['ADMIN', 'STAFF']:
+        raise HTTPException(status_code=403, detail="Not authorized to reschedule this appointment")
+        
+    if app.status != "BOOKED":
+        raise HTTPException(status_code=409, detail=f"Cannot reschedule appointment in {app.status} status")
+
+    if reschedule_in.appointment_date < date.today():
+        raise HTTPException(status_code=400, detail="Cannot reschedule to a past date")
+
+    app.appointment_date = reschedule_in.appointment_date
+    app.appointment_time = reschedule_in.appointment_time
+    if reschedule_in.notes is not None:
+        app.notes = reschedule_in.notes
+    db.flush()
+
+    # Recalculate reminders and invalidate obsolete pending reminders
+    try:
+        reschedule_appointment_reminders(db, app)
+    except Exception:
+        pass
+
+    db.commit()
+    db.refresh(app)
+
+    token = db.query(QueueToken).filter(QueueToken.appointment_id == app.id).first()
+    resp = AppointmentResponse.model_validate(app)
+    if token:
+        resp.token_number = token.token_number
+        resp.queue_token_id = token.id
+        resp.queue_position = token.queue_position
+        resp.estimated_waiting_time = token.estimated_waiting_time
+    return resp
+
+@router.get("/{appointment_id}/reminders", response_model=List[AppointmentReminderResponse])
+def get_appointment_reminders(
+    appointment_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    app = db.query(Appointment).filter(Appointment.id == appointment_id).first()
+    if not app:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+        
+    user_ids = [current_user.id]
+    customer_pid = getattr(current_user, 'customer_profile_id', None)
+    if customer_pid and customer_pid not in user_ids:
+        user_ids.append(customer_pid)
+
+    if app.user_id not in user_ids and current_user.role not in ['ADMIN', 'STAFF']:
+        raise HTTPException(status_code=403, detail="Not authorized to view reminders for this appointment")
+        
+    reminders = db.query(AppointmentReminder).filter(
+        AppointmentReminder.appointment_id == appointment_id
+    ).order_by(AppointmentReminder.minutes_before.desc()).all()
+    return reminders
+
+@router.post("/reminders/process-due")
+def trigger_process_due_reminders(
+    reference_time: Optional[str] = Query(None, description="ISO timestamp for testing/reference time"),
+    db: Session = Depends(get_db)
+):
+    ref_dt = None
+    if reference_time:
+        try:
+            ref_dt = datetime.fromisoformat(reference_time.replace("Z", "+00:00"))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid reference_time format. Use ISO format.")
+    stats = process_due_reminders(db, reference_now_utc=ref_dt)
+    return stats
+

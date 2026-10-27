@@ -194,7 +194,25 @@ CREATE TABLE IF NOT EXISTS reviews (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 15. APPOINTMENT REMINDERS
+CREATE TABLE IF NOT EXISTS appointment_reminders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reminder_type VARCHAR NOT NULL,
+    minutes_before INTEGER NOT NULL,
+    scheduled_for TIMESTAMPTZ NOT NULL,
+    status VARCHAR NOT NULL DEFAULT 'PENDING',
+    notification_id UUID REFERENCES notifications(id) ON DELETE SET NULL,
+    processed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT uq_appointment_reminder UNIQUE (appointment_id, reminder_type)
+);
+
 -- INDEXES
+CREATE INDEX IF NOT EXISTS idx_appointment_reminders_due ON appointment_reminders(status, scheduled_for);
+CREATE INDEX IF NOT EXISTS idx_appointment_reminders_appt ON appointment_reminders(appointment_id);
 CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_organizations_sector_id ON organizations(sector_id);

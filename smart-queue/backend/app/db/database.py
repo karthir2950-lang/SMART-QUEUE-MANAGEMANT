@@ -10,10 +10,10 @@ def init_engine():
     # If DATABASE_URL is PostgreSQL, test connection with a short timeout
     if settings.DATABASE_URL and not settings.DATABASE_URL.startswith("sqlite"):
         try:
+            from sqlalchemy.pool import NullPool
             pg_engine = create_engine(
                 settings.DATABASE_URL,
-                pool_pre_ping=True,
-                pool_recycle=300,
+                poolclass=NullPool,
                 connect_args={"connect_timeout": 10}
             )
             with pg_engine.connect() as conn:
@@ -31,7 +31,7 @@ def init_engine():
     return sqlite_engine
 
 engine = init_engine()
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
 
 def get_db():
     if not SessionLocal:
@@ -42,15 +42,16 @@ def get_db():
     finally:
         db.close()
 
-# Auto-initialize schema & seed if SQLite is used
+# Auto-initialize schema & seed ONLY if SQLite is used
 try:
-    from app.models.domain import User, Sector, Organization, Branch, Service, Counter, Staff, Appointment, QueueToken, QueueEvent
-    Base.metadata.create_all(bind=engine)
-    from app.db.seed import seed_db
-    init_db = SessionLocal()
-    try:
-        seed_db(init_db)
-    finally:
-        init_db.close()
+    if engine and engine.dialect.name == "sqlite":
+        from app.models.domain import User, Sector, Organization, Branch, Service, Counter, Staff, Appointment, QueueToken, QueueEvent
+        Base.metadata.create_all(bind=engine)
+        from app.db.seed import seed_db
+        init_db = SessionLocal()
+        try:
+            seed_db(init_db)
+        finally:
+            init_db.close()
 except Exception as seed_err:
     print(f"INFO: Database initialization notice: {seed_err}")

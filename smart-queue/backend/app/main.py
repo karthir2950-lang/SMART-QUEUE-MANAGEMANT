@@ -5,15 +5,52 @@ from sqlalchemy import text
 from typing import List, Optional
 from uuid import UUID
 import uuid
+import asyncio
+import logging
+from contextlib import asynccontextmanager
 
 from app.core.config import settings
-from app.db.database import get_db, engine
+from app.db.database import get_db, engine, SessionLocal
 from app.models.domain import Sector, Organization, Branch, Service, Counter, User
 from app.schemas.domain import SectorResponse, OrganizationResponse, BranchResponse, ServiceResponse, CounterResponse, UserResponse, UserProfileUpdate
 from app.core.security import require_user
 from app.api.endpoints import appointments
 
-app = FastAPI(title="Smart Queue Backend - Step 9", version="1.0.0")
+logger = logging.getLogger(__name__)
+
+async def background_reminder_worker():
+    """
+    Background worker loop that periodically evaluates and processes due appointment reminders.
+    Ensures reminder checks occur automatically without requiring client polling.
+    """
+    from app.services.reminder_service import process_due_reminders
+    while True:
+        try:
+            await asyncio.sleep(30)
+            if SessionLocal:
+                db = SessionLocal()
+                try:
+                    process_due_reminders(db)
+                finally:
+                    db.close()
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.warning(f"Background reminder check warning: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: spawn reminder worker
+    worker_task = asyncio.create_task(background_reminder_worker())
+    yield
+    # Shutdown: cancel reminder worker
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
+
+app = FastAPI(title="Smart Queue Backend - Step 9", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

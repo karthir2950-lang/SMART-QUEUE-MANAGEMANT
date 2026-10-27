@@ -25,12 +25,15 @@ def create_user_notification(
 
     # Prevent duplicate spam notifications
     if appointment_id:
-        existing = db.query(Notification).filter(
+        dup_query = db.query(Notification).filter(
             Notification.user_id == user_id,
             Notification.appointment_id == appointment_id,
             Notification.type == n_type,
-            Notification.created_at >= recent_cutoff
-        ).first()
+            Notification.title == title
+        )
+        if n_type != "APPOINTMENT_REMINDER":
+            dup_query = dup_query.filter(Notification.created_at >= recent_cutoff)
+        existing = dup_query.first()
         if existing:
             return existing
 

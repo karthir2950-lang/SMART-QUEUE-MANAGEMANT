@@ -126,6 +126,12 @@ export default function Notifications() {
           label: 'Appointment Booked',
           className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
         };
+      case 'APPOINTMENT_REMINDER':
+        return {
+          icon: '⏰',
+          label: 'Appointment Reminder',
+          className: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800'
+        };
       case 'APPOINTMENT_CANCELLED':
         return {
           icon: '🚫',
@@ -329,13 +335,22 @@ export default function Notifications() {
 
                     <div className="mt-3 flex flex-wrap items-center gap-2.5 pt-2 border-t border-[var(--color-border-subtle)]/60">
                       {item.appointment_id && (
-                        <Link
-                          to={`/user/token/${item.appointment_id}`}
-                          className="text-xs font-bold text-[var(--color-primary)] hover:underline inline-flex items-center gap-1"
-                        >
-                          <span>View Live Token</span>
-                          <span>→</span>
-                        </Link>
+                        <>
+                          <Link
+                            to={`/user/appointments`}
+                            className="text-xs font-bold text-[var(--color-primary)] hover:underline inline-flex items-center gap-1 bg-[var(--color-accent-subtle)] px-2.5 py-1 rounded-lg border border-[var(--color-border-subtle)]"
+                          >
+                            <span>📅 View Appointment Details</span>
+                            <span>→</span>
+                          </Link>
+                          <Link
+                            to={`/user/token/${item.appointment_id}`}
+                            className="text-xs font-semibold text-[var(--color-secondary)] hover:text-[var(--color-primary)] hover:underline inline-flex items-center gap-1"
+                          >
+                            <span>Live Token</span>
+                            <span>↗</span>
+                          </Link>
+                        </>
                       )}
 
                       {!item.is_read && (

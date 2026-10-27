@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Text, Numeric, Time, Date, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, String, Integer, Text, Numeric, Time, Date, ForeignKey, Boolean, JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, TIMESTAMP
 from sqlalchemy.sql import func
 from app.db.database import Base
@@ -218,3 +218,25 @@ class Review(Base):
     comment = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+class AppointmentReminder(Base):
+    __tablename__ = "appointment_reminders"
+    __table_args__ = (
+        UniqueConstraint("appointment_id", "reminder_type", name="uq_appointment_reminder"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    appointment_id = Column(UUID(as_uuid=True), ForeignKey("appointments.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    reminder_type = Column(String, nullable=False)  # "T_MINUS_120", "T_MINUS_90", "T_MINUS_60", "T_MINUS_30"
+    minutes_before = Column(Integer, nullable=False)  # 120, 90, 60, 30
+    scheduled_for = Column(TIMESTAMP(timezone=True), nullable=False, index=True)  # UTC timestamp
+    status = Column(String, nullable=False, default="PENDING", index=True)  # PENDING, PROCESSED, CANCELLED, SKIPPED
+    notification_id = Column(UUID(as_uuid=True), ForeignKey("notifications.id", ondelete="SET NULL"), nullable=True)
+    processed_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    appointment = relationship("Appointment", foreign_keys=[appointment_id])
+    user = relationship("User", foreign_keys=[user_id])
+    notification = relationship("Notification", foreign_keys=[notification_id])

@@ -48,3 +48,23 @@ class AvailableSlotRequest(BaseModel):
 class AvailableSlot(BaseModel):
     time: time
     available: bool
+
+class AppointmentReschedule(BaseModel):
+    appointment_date: date
+    appointment_time: time
+    notes: Optional[str] = None
+
+class AppointmentReminderResponse(BaseModel):
+    id: UUID4
+    appointment_id: UUID4
+    user_id: UUID4
+    reminder_type: str
+    minutes_before: int
+    scheduled_for: datetime
+    status: str
+    notification_id: Optional[UUID4] = None
+    processed_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
