@@ -20,10 +20,11 @@ logger = logging.getLogger(__name__)
 
 async def background_reminder_worker():
     """
-    Background worker loop that periodically evaluates and processes due appointment reminders.
+    Background worker loop that periodically evaluates and processes due appointment reminders (in-app + email).
     Ensures reminder checks occur automatically without requiring client polling.
     """
     from app.services.reminder_service import process_due_reminders
+    from app.services.email_reminder_service import process_due_email_reminders
     while True:
         try:
             await asyncio.sleep(30)
@@ -31,6 +32,7 @@ async def background_reminder_worker():
                 db = SessionLocal()
                 try:
                     process_due_reminders(db)
+                    process_due_email_reminders(db)
                 finally:
                     db.close()
         except asyncio.CancelledError:

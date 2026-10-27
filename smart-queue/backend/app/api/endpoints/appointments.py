@@ -11,6 +11,7 @@ from app.models.domain import User, Appointment, Branch, Service, Sector, Organi
 from app.schemas.appointment import AppointmentCreate, AppointmentResponse, AvailableSlot, AppointmentReschedule, AppointmentReminderResponse
 from app.services.token_service import issue_queue_token
 from app.services.reminder_service import schedule_appointment_reminders, cancel_appointment_reminders, reschedule_appointment_reminders, process_due_reminders
+from app.services.email_reminder_service import schedule_email_reminders, cancel_email_reminders, reschedule_email_reminders, process_due_email_reminders
 
 router = APIRouter()
 
@@ -160,9 +161,10 @@ def create_appointment(
     except Exception:
         pass
 
-    # Schedule durable smart appointment reminders (T-120, T-90, T-60, T-30)
+    # Schedule durable smart appointment reminders (in-app: T-120..30 & email: TWO_HOUR, THIRTY_MINUTE)
     try:
         schedule_appointment_reminders(db, new_app)
+        schedule_email_reminders(db, new_app)
     except Exception:
         pass
 
@@ -366,9 +368,10 @@ def cancel_appointment(
     except Exception:
         pass
 
-    # Cancel pending reminders
+    # Cancel pending reminders (in-app + email)
     try:
         cancel_appointment_reminders(db, app.id)
+        cancel_email_reminders(db, app.id)
     except Exception:
         pass
 
@@ -410,6 +413,7 @@ def reschedule_appointment(
     # Recalculate reminders and invalidate obsolete pending reminders
     try:
         reschedule_appointment_reminders(db, app)
+        reschedule_email_reminders(db, app)
     except Exception:
         pass
 
@@ -459,6 +463,12 @@ def trigger_process_due_reminders(
             ref_dt = datetime.fromisoformat(reference_time.replace("Z", "+00:00"))
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid reference_time format. Use ISO format.")
-    stats = process_due_reminders(db, reference_now_utc=ref_dt)
-    return stats
+    in_app_stats = process_due_reminders(db, reference_now_utc=ref_dt)
+    email_stats = process_due_email_reminders(db, reference_now_utc=ref_dt)
+    return {
+        "checked_reminders": in_app_stats.get("checked_reminders", 0) + email_stats.get("checked", 0),
+        "processed": in_app_stats.get("processed", 0) + email_stats.get("sent", 0),
+        "in_app": in_app_stats,
+        "email": email_stats
+    }
 

@@ -14,7 +14,8 @@ def init_engine():
             pg_engine = create_engine(
                 settings.DATABASE_URL,
                 poolclass=NullPool,
-                connect_args={"connect_timeout": 10}
+                pool_pre_ping=True,
+                connect_args={"connect_timeout": 30}
             )
             with pg_engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
